@@ -3,6 +3,9 @@ var http = require('http');
 var path = require('path');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
+var morgan = require('morgan');
+var cookieParser = require('cookie-parser');
+var session = require('express-session');
 
 //==================================================================
 // Define the strategy to be used by PassportJS
@@ -27,7 +30,7 @@ passport.deserializeUser(function(user, done) {
 // Define a middleware function to be used for every secured routes
 var auth = function(req, res, next){
   if (!req.isAuthenticated()) 
-  	res.send(401);
+    return res.sendStatus(401);
   else
   	next();
 };
@@ -38,23 +41,29 @@ var app = express();
 
 // all environments
 app.set('port', process.env.PORT || 3000);
-app.set('views', __dirname + '/views');
+app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
-app.use(express.favicon());
-app.use(express.logger('dev'));
-app.use(express.cookieParser()); 
-app.use(express.bodyParser());
-app.use(express.methodOverride());
-app.use(express.session({ secret: 'securedsession' }));
+
+// middleware (modern replacements)
+app.use(morgan('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(session({ 
+  secret: 'securedsession',
+  resave: false,
+  saveUninitialized: false
+}));
+
 app.use(passport.initialize()); // Add passport initialization
 app.use(passport.session());    // Add passport initialization
-app.use(app.router);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // development only
-if ('development' == app.get('env')) {
-  app.use(express.errorHandler());
-}
+// if ('development' == app.get('env')) {
+//   app.use(express.errorHandler());
+// }
 
 //==================================================================
 // routes
@@ -63,7 +72,7 @@ app.get('/', function(req, res){
 });
 
 app.get('/users', auth, function(req, res){
-  res.send([{name: "user1"}, {name: "user2"}]);
+  res.json([{name: "user1"}, {name: "user2"}]);
 });
 //==================================================================
 
